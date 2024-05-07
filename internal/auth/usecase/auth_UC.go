@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,11 +47,6 @@ func NewAuthUC(userRepo repository.AuthRepoItf, email email.EmailItf,
 
 // Create implements AuthUCItf.
 func (u *AuthUC) Register(req model.CreateUserReq) (*model.UserResponse, error) {
-	exist := u.userRepo.GetEmailExist(req.Email)
-	if exist {
-		return nil, customError.ErrEmailAlreadyExists
-	}
-
 	hashPwd, err := helper.HashPassword(req.Password)
 	if err != nil {
 		return nil, err
@@ -62,9 +58,9 @@ func (u *AuthUC) Register(req model.CreateUserReq) (*model.UserResponse, error) 
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("code : %v", code)
+
 	parseCode := sql.NullString{String: code, Valid: true}
-	log.Printf("parsed code : %v", parseCode)
+
 	user := &entity.User{
 		ID:               uuid.New(),
 		FullName:         req.FullName,
@@ -83,6 +79,9 @@ func (u *AuthUC) Register(req model.CreateUserReq) (*model.UserResponse, error) 
 
 	err = u.userRepo.Create(user)
 	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return nil, customError.ErrEmailAlreadyExists
+		}
 		return nil, err
 	}
 
