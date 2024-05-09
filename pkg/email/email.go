@@ -23,7 +23,7 @@ func NewEmail() EmailItf {
 }
 
 func (e *Email) SendEmail(user *entity.User, verificationCode string) error {
-	url := "http://localhost:8080/api/v1/auth/verify-email/" + verificationCode
+	url := "https://bb9d-180-248-26-61.ngrok-free.app/api/v1/auth/verify-email/" + verificationCode
 
 	textString := fmt.Sprintf(`
 		<html>

@@ -1,9 +1,20 @@
 package app
 
 import (
-	"FindIt/internal/auth/delivery"
-	"FindIt/internal/auth/repository"
-	"FindIt/internal/auth/usecase"
+	authDelivery "FindIt/internal/auth/delivery"
+	authRepo "FindIt/internal/auth/repository"
+	authUC "FindIt/internal/auth/usecase"
+	postDelivery "FindIt/internal/post/delivery"
+	postRepo "FindIt/internal/post/repository"
+	postUC "FindIt/internal/post/usecase"
+	userRepo "FindIt/internal/user/repository"
+	userUC "FindIt/internal/user/usecase"
+	likeDelivery "FindIt/internal/like/delivery"
+	likeRepo "FindIt/internal/like/repository"
+	likeUC "FindIt/internal/like/usecase"
+	commentDelivery "FindIt/internal/comment/delivery"
+	commentRepo "FindIt/internal/comment/repository"
+	commentUC "FindIt/internal/comment/usecase"
 	"FindIt/internal/middleware"
 	"fmt"
 	"log"
@@ -60,13 +71,24 @@ func (config *BootstrapConfig) Init() {
 	supabase := supabase.NewSupabaseStorage(client)
 
 	// init repostiory
-	authRepo := repository.NewAuthRepo(config.db)
+	authRepo := authRepo.NewAuthRepo(config.db)
+	postRepo := postRepo.NewPostRepo(config.db)
+	userRepo := userRepo.NewUserRepo(config.db)
+	likeRepo := likeRepo.NewLikeRepo(config.db)
+	commentRepo := commentRepo.NewCommentRepo(config.db)
 
 	// init usecase
-	authUC := usecase.NewAuthUC(authRepo, email, cron, jwt, supabase)
+	authUC := authUC.NewAuthUC(authRepo, email, cron, jwt, supabase)
+	postUC := postUC.NewPostUC(postRepo, userRepo, likeRepo, commentRepo, supabase)
+	userUC := userUC.NewUserUC(userRepo)
+	likeUC := likeUC.NewLikeUC(likeRepo)
+	commentUC := commentUC.NewCommentUC(commentRepo, userRepo)
 
 	// init handler
-	authHandler := delivery.NewAuthHandler(authUC)
+	authHandler := authDelivery.NewAuthHandler(authUC)
+	postHandler := postDelivery.NewPostHandler(postUC, userUC)
+	likeHandler:= likeDelivery.NewLikeHandler(likeUC)
+	commentHandler := commentDelivery.NewCommentHandler(commentUC)
 
 	// init middleware
 	mdlwr := middleware.NewMiddleware(jwt, authUC)
@@ -91,7 +113,17 @@ func (config *BootstrapConfig) Init() {
 
 	// auth routes
 	auth := v1.Group("/auth")
-	delivery.AuthRoutes(auth, authHandler, mdlwr)
+	authDelivery.AuthRoutes(auth, authHandler, mdlwr)
+
+	// post routes
+	post := v1.Group("/post")
+	postDelivery.PostRoutes(post, postHandler, mdlwr)
+
+	// like routes
+	likeDelivery.LikeRoutes(post, likeHandler, mdlwr)
+
+	// comment routes
+	commentDelivery.CommentRoutes(post, commentHandler, mdlwr)
 
 	// start server
 	if err := config.route.Run(fmt.Sprintf(":%s", os.Getenv("PORT"))); err != nil {
