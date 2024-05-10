@@ -15,7 +15,10 @@ migrateup:
 migratedown:
 	migrate -path migration -database "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=disable" -verbose down
 
+migrateforce:
+	migrate -path migration -database "postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=disable" -verbose force 20240508120431
+
 server:
 	go run cmd/main.go
 
-.PHONY : migrateup migratedown server
+.PHONY : migrateup migratedown server migrateforce
