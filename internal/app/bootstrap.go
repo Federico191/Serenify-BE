@@ -9,12 +9,21 @@ import (
 	postUC "FindIt/internal/post/usecase"
 	userRepo "FindIt/internal/user/repository"
 	userUC "FindIt/internal/user/usecase"
+	userDelivery "FindIt/internal/user/delivery"
 	likeDelivery "FindIt/internal/like/delivery"
 	likeRepo "FindIt/internal/like/repository"
 	likeUC "FindIt/internal/like/usecase"
 	commentDelivery "FindIt/internal/comment/delivery"
 	commentRepo "FindIt/internal/comment/repository"
 	commentUC "FindIt/internal/comment/usecase"
+	answerUC "FindIt/internal/answer/usecase"
+	answerDelivery "FindIt/internal/answer/delivery"
+	articleUC "FindIt/internal/article/usecase"
+	articleDelivery "FindIt/internal/article/delivery"
+	articleRepo "FindIt/internal/article/repository"
+	seminarDelivery "FindIt/internal/seminar/delivery"
+	seminarRepo "FindIt/internal/seminar/repository"
+	seminarUC "FindIt/internal/seminar/usecase"
 	"FindIt/internal/middleware"
 	"fmt"
 	"log"
@@ -76,19 +85,28 @@ func (config *BootstrapConfig) Init() {
 	userRepo := userRepo.NewUserRepo(config.db)
 	likeRepo := likeRepo.NewLikeRepo(config.db)
 	commentRepo := commentRepo.NewCommentRepo(config.db)
+	articleRepo := articleRepo.NewArticleRepo(config.db)
+	seminarRepo := seminarRepo.NewSeminarRepo(config.db)
 
 	// init usecase
 	authUC := authUC.NewAuthUC(authRepo, email, cron, jwt, supabase)
 	postUC := postUC.NewPostUC(postRepo, userRepo, likeRepo, commentRepo, supabase)
-	userUC := userUC.NewUserUC(userRepo)
+	userUC := userUC.NewUserUC(userRepo, supabase)
 	likeUC := likeUC.NewLikeUC(likeRepo)
-	commentUC := commentUC.NewCommentUC(commentRepo, userRepo)
+	commentUC := commentUC.NewCommentUC(commentRepo, userRepo, likeRepo)
+	answerUC := answerUC.NewAnswerUC(userRepo)
+	articleUC := articleUC.NewArticleUC(articleRepo)
+	seminarUC := seminarUC.NewSeminarUC(seminarRepo)
 
 	// init handler
 	authHandler := authDelivery.NewAuthHandler(authUC)
+	userHandler := userDelivery.NewUserHandler(userUC, answerUC)
 	postHandler := postDelivery.NewPostHandler(postUC, userUC)
 	likeHandler:= likeDelivery.NewLikeHandler(likeUC)
 	commentHandler := commentDelivery.NewCommentHandler(commentUC)
+	answerHandler := answerDelivery.NewAnswerHandler(answerUC)
+	articleHandler := articleDelivery.NewArticleHandler(articleUC)
+	seminarHandler := seminarDelivery.NewSeminarHandler(seminarUC)
 
 	// init middleware
 	mdlwr := middleware.NewMiddleware(jwt, authUC)
@@ -115,6 +133,10 @@ func (config *BootstrapConfig) Init() {
 	auth := v1.Group("/auth")
 	authDelivery.AuthRoutes(auth, authHandler, mdlwr)
 
+	// user routes
+	user := v1.Group("/user")
+	userDelivery.UserRoutes(user, userHandler, mdlwr)
+
 	// post routes
 	post := v1.Group("/post")
 	postDelivery.PostRoutes(post, postHandler, mdlwr)
@@ -124,6 +146,18 @@ func (config *BootstrapConfig) Init() {
 
 	// comment routes
 	commentDelivery.CommentRoutes(post, commentHandler, mdlwr)
+
+	// answer routes
+	answer := v1.Group("/answer")
+	answerDelivery.AnswerRoutes(answer, answerHandler, mdlwr)
+
+	// article routes
+	article := v1.Group("/article")
+	articleDelivery.ArticleRoutes(article, articleHandler)
+
+	// seminar routes
+	seminar := v1.Group("/seminar")
+	seminarDelivery.SeminarRoutes(seminar, seminarHandler)
 
 	// start server
 	if err := config.route.Run(fmt.Sprintf(":%s", os.Getenv("PORT"))); err != nil {
