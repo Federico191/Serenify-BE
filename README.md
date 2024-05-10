@@ -28,4 +28,4 @@ Postman : https://documenter.getpostman.com/view/30865611/2sA3JM5gFB#c16bb113-27
 | Gin      | HTTP Framework yang digunakan untuk membuat REST API                      |
 | Supabase | Platform cloud storage yang digunakan untuk menyimpan file dalam aplikasi |
 | SMTP     | Protokol yang digunakan untuk mengatur pengiriman email dalam aplikasi    |
-| Database | DBMS yang digunakan untuk menyimpan data aplikasi                         |
+| Postgres | DBMS yang digunakan untuk menyimpan data aplikasi                         |
