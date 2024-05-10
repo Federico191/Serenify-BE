@@ -5,6 +5,6 @@ create table seminars (
     place varchar(50) not null,
     price int not null,
     description varchar(255) not null,
-    photo_link varchar(100),
+    photo_link varchar(255),
     created_at timestamp default current_timestamp
 );

@@ -2,7 +2,7 @@ create table posts (
     ID varchar(100) primary key,
     user_id varchar(100) not null,
     content varchar(255) not null,
-    photo_link varchar(100),
+    photo_link varchar(255),
     created_at timestamptz default current_timestamp,
     updated_at timestamptz default current_timestamp
 );

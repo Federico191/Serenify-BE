@@ -4,7 +4,7 @@ create table users (
 	birth_date date not null,
 	email varchar(30) unique not null,
 	password varchar(100) not null,
-	photo_link varchar(100),
+	photo_link varchar(255),
 	verification_code varchar(40),
 	is_verified boolean default false,
 	score_test int default 0,
