@@ -9,7 +9,7 @@
 3. Federico Roberto D.S - Hacker 
 
 ## Brief Explanation 
-Serenify adalah sebuah aplikasi mobile yang dirancang untuk meningkatkan mental awareness pengguna. Aplikasi ini menawarkan fitur-fitur berikut : 
+Serenify adalah sebuah aplikasi mobile yang bertujuan untuk meningkatkan kesadaran dan kesejahteraan mental pengguna. Aplikasi ini menyediakan fitur untuk membantu pengguna memahami dan mengelola kesehatan mental mereka secara lebih baik. Aplikasi ini menawarkan fitur-fitur berikut : 
 
 1. **Tes Mental Awareness** : Pengguna dapat mengetahui seberapa jauh tingkat mental awareness-nya dengan mengikuti tes ini.
 2. **Hasil Tes dan Rekomendesasi Aktivitas** : 
