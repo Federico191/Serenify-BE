@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"FindIt/pkg/response"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 func (m *Middleware) JwtAuthMiddleware(ctx *gin.Context) {
 	bearer := ctx.GetHeader("Authorization")
     if bearer == "" {
-        response.Error(ctx, http.StatusUnauthorized, "Authorization token is required", nil)
+        response.Error(ctx, http.StatusUnauthorized, "Unauthorized : ", errors.New("Authorization token is required"))
         ctx.Abort()
         return
     }
