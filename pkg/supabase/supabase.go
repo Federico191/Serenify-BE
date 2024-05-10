@@ -4,6 +4,7 @@ import (
 	"io"
 	"mime/multipart"
 	"path/filepath"
+	"strings"
 
 	storage_go "github.com/supabase-community/storage-go"
 )
@@ -40,5 +41,9 @@ func (s SupabaseStorage) Upload(bucket string, file *multipart.FileHeader) (stri
 		return "", err 
 	}
 
-	return result.Key, nil
+	url := s.client.GetPublicUrl("", result.Key)
+
+    cleanedURL := strings.Replace(url.SignedURL, "public//", "public/", -1)
+
+	return cleanedURL, nil
 }
