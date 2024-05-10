@@ -3,8 +3,8 @@ package usecase
 import (
 	commentRepo "FindIt/internal/comment/repository"
 	"FindIt/internal/entity"
+	likeRepo "FindIt/internal/like/repository"
 	userRepo "FindIt/internal/user/repository"
-    likeRepo "FindIt/internal/like/repository"
 	"FindIt/model"
 	customError "FindIt/pkg/error"
 	"strings"
@@ -21,11 +21,12 @@ type CommentUCItf interface {
 type CommentUC struct {
 	commentRepo commentRepo.CommentRepoItf
 	userRepo    userRepo.UserRepoItf
-    likeRepo    likeRepo.LikeRepoItf
+	likeRepo    likeRepo.LikeRepoItf
 }
 
-func NewCommentUC(commentRepo commentRepo.CommentRepoItf, userRepo userRepo.UserRepoItf) CommentUCItf {
-	return &CommentUC{commentRepo: commentRepo, userRepo: userRepo}
+func NewCommentUC(commentRepo commentRepo.CommentRepoItf,
+	userRepo userRepo.UserRepoItf, likeRepo likeRepo.LikeRepoItf) CommentUCItf {
+	return &CommentUC{commentRepo: commentRepo, userRepo: userRepo, likeRepo: likeRepo}
 }
 
 // CreateComment implements CommentUCItf.
@@ -49,10 +50,10 @@ func (c *CommentUC) CreateComment(req model.CreateCommentReq) (*model.CommentRes
 		return nil, err
 	}
 
-    totalLikes, err := c.likeRepo.GetTotalCommentLikes(comment.ID)
-    if err != nil {
-        return nil, err
-    }
+	totalLikes, err := c.likeRepo.GetTotalCommentLikes(comment.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return convertToCommentResp(comment, user, totalLikes), nil
 }
@@ -85,10 +86,10 @@ func (c *CommentUC) UpdateComment(req model.UpdateCommentReq) (*model.CommentRes
 		return nil, err
 	}
 
-    totalLikes, err := c.likeRepo.GetTotalCommentLikes(comment.ID)
-    if err != nil {
-        return nil, err
-    }
+	totalLikes, err := c.likeRepo.GetTotalCommentLikes(comment.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	return convertToCommentResp(comment, user, totalLikes), nil
 }
@@ -109,13 +110,13 @@ func (c *CommentUC) DeleteComment(userId uuid.UUID, commentId int) error {
 
 func convertToCommentResp(comment *entity.Comment, user *entity.User, totalLikes int) *model.CommentResp {
 	return &model.CommentResp{
-		ID:        comment.ID,
-		UserID:    comment.UserID,
-		UserName:  user.FullName,
-		UserPhoto: user.PhotoLink.String,
-		PostID:    comment.PostID,
-		Comment:   comment.Comment,
-		CreatedAt: comment.CreatedAt,
-        TotalLikes: totalLikes,
+		ID:         comment.ID,
+		UserID:     comment.UserID,
+		UserName:   user.FullName,
+		UserPhoto:  user.PhotoLink.String,
+		PostID:     comment.PostID,
+		Comment:    comment.Comment,
+		CreatedAt:  comment.CreatedAt,
+		TotalLikes: totalLikes,
 	}
 }
