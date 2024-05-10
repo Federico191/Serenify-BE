@@ -11,6 +11,6 @@ func AuthRoutes(authGroup *gin.RouterGroup, handler *AuthHandler, middleware mid
     authGroup.POST("/login", handler.Login)
     authGroup.GET("/verify-email/:verificationCode", handler.VerifyEmail)
     authGroup.GET("/current-user", middleware.JwtAuthMiddleware, handler.GetCurrentUser)
-    authGroup.POST("/upload-photo", middleware.JwtAuthMiddleware, handler.UploadPhoto)
-
+    authGroup.POST("/forgot-password", middleware.JwtAuthMiddleware, handler.RequestResetPassword)
+    authGroup.GET("/reset-password/:resetToken", handler.ResetPassword)
 }

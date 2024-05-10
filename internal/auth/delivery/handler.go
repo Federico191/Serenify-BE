@@ -23,18 +23,6 @@ func NewAuthHandler(auth usecase.AuthUCItf) *AuthHandler {
 	return &AuthHandler{auth: auth}
 }
 
-// Register godoc
-// @Summary      Register a new user
-// @Description  Register a new user with create user request
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Param        request body model.CreateUserReq true "Create User Request"
-// @Success      201 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      409 {object} response.Response
-// @Failure      500 {object} response.Response
-// @Router       /auth/register [post]
 func (uh *AuthHandler) Register(ctx *gin.Context) {
 	var req model.CreateUserReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -53,23 +41,9 @@ func (uh *AuthHandler) Register(ctx *gin.Context) {
 		return
 	}
 
-	response.Success(ctx, http.StatusCreated, "successfully resgister", user)
+	response.Success(ctx, http.StatusCreated, "successfully register", user)
 }
 
-// Login godoc
-// @Summary      Login a user
-// @Description  Login a user with login user request
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Param        request body model.LoginUserReq true "Login User Request"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
-// @Failure      401 {object} response.Response
-// @Failure      403 {object} response.Response
-// @Failure      500 {object} response.Response
-// @Router       /auth/login [post]
 func (uh *AuthHandler) Login(ctx *gin.Context) {
 	var req model.LoginUserReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -95,17 +69,6 @@ func (uh *AuthHandler) Login(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, "successfully logged in", token)
 }
 
-// VerifyEmail godoc
-// @Summary      Verify email
-// @Description  Verify email with verification code
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
-// @Failure      500 {object} response.Response
-// @Router       /auth/verify-email/{verificationCode} [get]
 func (uh *AuthHandler) VerifyEmail(ctx *gin.Context) {
 	codeParam := ctx.Param("verificationCode")
 	log.Println(codeParam)
@@ -149,29 +112,8 @@ func (uh *AuthHandler) VerifyEmail(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, "email verified", user.IsVerified)
 }
 
-// GetCurrentUser godoc
-// @Summary      Get current user
-// @Description  Get current user with user id from context
-// @Tags         Auth
-// @Accept       json
-// @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
-// @Failure      500 {object} response.Response
-// @Router       /auth/current-user [get]
 func (uh *AuthHandler) GetCurrentUser(ctx *gin.Context) {
-	userIdCtx, ok := ctx.Get("userId")
-	if !ok {
-		response.Error(ctx, http.StatusBadRequest, "failed to get user id from context", errors.New(""))
-		return 
-	}
-
-	userId, ok := userIdCtx.(uuid.UUID)
-	if !ok {
-		response.Error(ctx, http.StatusBadRequest, "failed to convert user id to uuid", errors.New(""))
-		return
-	}
+	userId := getUserId(ctx)
 
 	user, err := uh.auth.GetUserById(userId)
 	if err != nil {
@@ -185,51 +127,57 @@ func (uh *AuthHandler) GetCurrentUser(ctx *gin.Context) {
 	response.Success(ctx, http.StatusOK, "success get current user", user)
 }
 
-// UploadPhoto godoc
-// @Summary      Upload photo
-// @Description  Upload photo with user id from context and form file
-// @Tags         Auth
-// @Accept       multipart/form-data
-// @Produce      json
-// @Param        photo formData file true "Photo"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
-// @Failure      500 {object} response.Response
-// @Router       /auth/upload-photo [post]
-func (uh *AuthHandler) UploadPhoto(ctx *gin.Context) {
+func (uh *AuthHandler) RequestResetPassword(ctx *gin.Context) {
+	var req model.RequestResetPassword
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "failed to bind request", err)
+		return
+	}
+
+	err := uh.auth.RequestResetPassword(req.Email)
+	if err != nil {
+		if errors.Is(err, customError.ErrRecordNotFound) {
+			response.Error(ctx, http.StatusNotFound, "user not found", err)
+		} else if errors.Is(err, customError.ErrEmailNotVerified) {
+			response.Error(ctx, http.StatusForbidden, "email not verified", err)
+		}
+		response.Error(ctx, http.StatusInternalServerError, "failed to request reset password", err)
+		return
+	}
+}
+
+func (uh *AuthHandler) ResetPassword(ctx *gin.Context) {
+	var req model.ResetPasswordReq
+
+	tokenParam := ctx.Param("resetToken")
+
+	req.Token = tokenParam
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "failed to bind request", err)
+		return
+	}
+
+	err := uh.auth.ResetPassword(req)
+	if err != nil {
+
+		response.Error(ctx, http.StatusInternalServerError, "failed to reset password", err)
+	}
+}
+
+func getUserId(ctx *gin.Context) uuid.UUID {
 	userIdCtx, ok := ctx.Get("userId")
 	if !ok {
 		response.Error(ctx, http.StatusBadRequest, "failed to get user id from context", errors.New(""))
-		return
+		return uuid.UUID{}
 	}
 
 	userId, ok := userIdCtx.(uuid.UUID)
 	if !ok {
 		response.Error(ctx, http.StatusBadRequest, "failed to convert user id to uuid", errors.New(""))
-		return
+		return uuid.UUID{}
 	}
 
-	file, err := ctx.FormFile("photo")
-	if err != nil {
-		response.Error(ctx, http.StatusBadRequest, "failed to get file", err)
-		return
-	}
-
-
-	req := &model.UploadPhotoReq{
-		Photo: file,
-	}
-
-	err = uh.auth.UploadPhoto(req, userId)
-	if err != nil {
-		if errors.Is(err, customError.ErrRecordNotFound) {
-			response.Error(ctx, http.StatusNotFound, "user not found", err)
-			return
-		}
-		response.Error(ctx, http.StatusInternalServerError, "failed to upload photo", err)
-		return 
-	}
-
-	response.Success(ctx, http.StatusOK, "success upload photo", file.Filename)
+	return userId
 }

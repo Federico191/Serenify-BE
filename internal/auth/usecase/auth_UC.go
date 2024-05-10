@@ -14,8 +14,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -25,9 +23,10 @@ import (
 type AuthUCItf interface {
 	Register(req model.CreateUserReq) (*model.UserResponse, error)
 	Login(req model.LoginUserReq) (string, error)
-	UploadPhoto(req *model.UploadPhotoReq, id uuid.UUID) error
 	GetUserById(id uuid.UUID) (*model.UserResponse, error)
 	GetUserByVerificationCode(code sql.NullString) (*entity.User, error)
+	RequestResetPassword(email string) error
+	ResetPassword(req model.ResetPasswordReq) error
 	UpdateUser(req model.UpdateUserReq, id uuid.UUID) error
 	DeleteVerificationCode() error
 }
@@ -40,7 +39,7 @@ type AuthUC struct {
 	supabase supabase.SupabaseStorageItf
 }
 
-func NewAuthUC(userRepo repository.AuthRepoItf, email email.EmailItf, 
+func NewAuthUC(userRepo repository.AuthRepoItf, email email.EmailItf,
 	cron gocron.CronItf, jwt jwtPkg.JWTItf, supabase supabase.SupabaseStorageItf) AuthUCItf {
 	return &AuthUC{userRepo: userRepo, email: email, cron: cron, jwt: jwt, supabase: supabase}
 }
@@ -72,7 +71,7 @@ func (u *AuthUC) Register(req model.CreateUserReq) (*model.UserResponse, error) 
 
 	encodedCode := encode.Encode(code)
 
-	err = u.email.SendEmail(user, encodedCode)
+	err = u.email.SendEmailVerification(user, encodedCode)
 	if err != nil {
 		return nil, err
 	}
@@ -117,36 +116,6 @@ func (u *AuthUC) Login(req model.LoginUserReq) (string, error) {
 	return token, nil
 }
 
-// UploadPhoto implements AuthUCItf.
-func (u *AuthUC) UploadPhoto(req *model.UploadPhotoReq, id uuid.UUID) error {
-	user, err := u.userRepo.GetById(id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return customError.ErrRecordNotFound
-		}
-		return err
-	}
-
-	log.Println("sebelum upload")
-	photoLink, err := u.supabase.Upload(os.Getenv("SUPABASE_BUCKET"), req.Photo)
-	if err != nil {
-		return fmt.Errorf("failed to upload photo: %w", err)
-	}
-	log.Println("sesudah upload")
-
-	user.PhotoLink = sql.NullString{
-		String: photoLink,
-		Valid:  true,
-	}
-
-	err = u.userRepo.UpdateUser(user)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetUserById implements AuthUCItf.
 func (u *AuthUC) GetUserById(id uuid.UUID) (*model.UserResponse, error) {
 	user, err := u.userRepo.GetById(id)
@@ -173,6 +142,77 @@ func (u *AuthUC) GetUserByVerificationCode(code sql.NullString) (*entity.User, e
 	}
 
 	return user, nil
+}
+
+// RequestResetPassword implements AuthUCItf.
+func (u *AuthUC) RequestResetPassword(email string) error {
+	user, err := u.userRepo.GetByEmail(email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return customError.ErrRecordNotFound
+		}
+		return err
+	}
+
+	token := uuid.New()
+
+	resetToken:= entity.ResetPasswordToken{
+		Token: token,
+		UserId: user.ID,
+		ExpiredAt: time.Now().Add(time.Hour * 1),
+	}
+
+	err = u.userRepo.CreateTokenReset(&resetToken)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return customError.ErrEmailAlreadyExists
+		}
+		return err
+	}
+
+	err = u.email.SendEmailResetPassword(user, token.String())
+	if err != nil {
+		return nil
+	}
+	return nil
+}
+
+// ResetPassword implements AuthUCItf.
+func (u *AuthUC) ResetPassword(req model.ResetPasswordReq) error {
+	tokenReset, err := u.userRepo.GetTokenReset(req.Token)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return customError.ErrRecordNotFound
+		}
+		return err
+	}
+
+	if time.Now().After(tokenReset.ExpiredAt) {
+		return errors.New("token expired")
+	}
+
+	user, err := u.userRepo.GetById(tokenReset.UserId)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return customError.ErrRecordNotFound
+		}
+		return err
+	}
+
+	hashPwd, err := helper.HashPassword(req.NewPassword)
+	if err != nil {
+		return err
+	}
+
+	user.Password = hashPwd
+
+	err = u.userRepo.UpdateUser(user)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 // UpdateUser implements AuthUCItf.
@@ -231,7 +271,6 @@ func (u *AuthUC) DeleteVerificationCode() error {
 	for _, user := range expiredCodes {
 		err = u.userRepo.DeleteVerificationCode(user.Email)
 		if err != nil {
-			log.Printf("failed to delete verification code for %s: %v\n", user.Email, err)
 			continue
 		}
 	}

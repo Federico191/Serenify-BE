@@ -3,7 +3,6 @@ package repository
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	"FindIt/internal/entity"
 
@@ -13,13 +12,15 @@ import (
 
 type AuthRepoItf interface {
 	Create(user *entity.User) error
+	CreateTokenReset(token *entity.ResetPasswordToken) error
 	GetById(id uuid.UUID) (*entity.User, error)
 	GetByEmail(email string) (*entity.User, error)
 	GetByVerificationCode(code sql.NullString) (*entity.User, error)
-	GetEmailExist(email string) bool
+	GetTokenReset(token string) (*entity.ResetPasswordToken, error)
 	GetExpiredVerificationCode() ([]*entity.User, error)
 	UpdateUser(user *entity.User) error
 	DeleteVerificationCode(email string) error
+	DeleteTokenReset(token string) error
 }
 
 type AuthRepo struct {
@@ -34,6 +35,25 @@ func NewAuthRepo(db *sqlx.DB) AuthRepoItf {
 func (ur *AuthRepo) Create(user *entity.User) error {
 	result, err := ur.db.Exec(createUserQuery, user.ID, user.FullName, user.BirthDate, user.Email,
 		user.Password, user.VerificationCode)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows != 1 {
+		return fmt.Errorf("expected single row affected, got %d rows affected", rows)
+	}
+
+	return nil
+}
+
+// CreateTokenReset implements AuthRepoItf.
+func (ur *AuthRepo) CreateTokenReset(token *entity.ResetPasswordToken) error {
+	result, err := ur.db.Exec(createTokenResetPasswordQuery, token.Token, token.UserId, token.ExpiredAt)
 	if err != nil {
 		return err
 	}
@@ -74,6 +94,19 @@ func (ur *AuthRepo) GetByEmail(email string) (*entity.User, error) {
 	return &user, nil
 }
 
+// GetTokenReset implements AuthRepoItf.
+func (ur *AuthRepo) GetTokenReset(token string) (*entity.ResetPasswordToken, error) {
+	var resetPasswordToken entity.ResetPasswordToken
+
+	err := ur.db.QueryRowx(GetTokenResetQuery, token).StructScan(&resetPasswordToken)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resetPasswordToken, nil
+
+}
+
 // GetByVerificationCode implements AuthRepoItf.
 func (ur *AuthRepo) GetByVerificationCode(code sql.NullString) (*entity.User, error) {
 	var user entity.User
@@ -84,18 +117,6 @@ func (ur *AuthRepo) GetByVerificationCode(code sql.NullString) (*entity.User, er
 	}
 
 	return &user, nil
-}
-
-// GetEmailExist implements AuthRepoItf.
-func (ur *AuthRepo) GetEmailExist(email string) bool {
-	var count int
-
-	err := ur.db.QueryRowx(getUserByEmailQuery, email).Scan(&count)
-	if err != nil {
-		return false
-	}
-
-	return count > 0
 }
 
 // GetExpiredVerificationCode implements AuthRepoItf.
@@ -153,7 +174,25 @@ func (ur *AuthRepo) DeleteVerificationCode(email string) error {
 	if rows != 1 {
 		return fmt.Errorf("expected single row affected, got %d rows affected", rows)
 	}
-	log.Printf("success delete verification code for %s\n", email)
+
+	return nil
+}
+
+// DeleteTokenReset implements AuthRepoItf.
+func (ur *AuthRepo) DeleteTokenReset(token string) error {
+	result, err := ur.db.Exec(deleteTokenResetPasswordQuery, token)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rows != 1 {
+		return fmt.Errorf("expected single row affected, got %d rows affected", rows)
+	}
 
 	return nil
 }

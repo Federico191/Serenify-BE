@@ -5,9 +5,14 @@ const (
 	VALUES ($1, $2, $3, $4, $5, $6)
 	RETURNING *`
 
+	createTokenResetPasswordQuery = `INSERT INTO reset_password_tokens (token, user_id, expired_at)
+	VALUES ($1, $2, $3) RETURNING *`
+
 	getUserByIdQuery = `SELECT * FROM users WHERE id = $1`
 
 	getUserByEmailQuery = `SELECT * FROM users WHERE email = $1`
+
+	GetTokenResetQuery = `SELECT * FROM reset_password_tokens WHERE token = $1`
 
 	getUserByVerificationCodeQuery = `SELECT * FROM users WHERE verification_code = $1`
 
@@ -18,4 +23,6 @@ const (
 	WHERE id = $7 RETURNING *`
 
 	deleteVerificationCodeQuery = `UPDATE users SET verification_code = NULL WHERE email = $1 RETURNING *`
+
+	deleteTokenResetPasswordQuery = `DELETE FROM reset_password_tokens WHERE token = $1 RETURNING *`
 )
