@@ -13,7 +13,7 @@ import (
 type PostRepoItf interface {
 	CreatePost(post *entity.Post) error
 	GetPostById(id uuid.UUID) (*entity.Post, error)
-	GetAllPosts(limit, offset int) ([]entity.PostWithLikeCount, error)
+	GetAllPosts() ([]entity.PostWithLikeCount, error)
 	UpdatePost(post *entity.Post) error
 	IsPostOwner(userId, postId uuid.UUID) (bool, error)
 	DeletePost(id uuid.UUID) error
@@ -81,10 +81,10 @@ func (p *PostRepo) GetPostById(id uuid.UUID) (*entity.Post, error) {
 }
 
 // GetAllPosts implements PostRepoItf.
-func (p *PostRepo) GetAllPosts(limit, offset int) ([]entity.PostWithLikeCount, error) {
+func (p *PostRepo) GetAllPosts() ([]entity.PostWithLikeCount, error) {
 	var posts []entity.PostWithLikeCount
 
-	rows, err := p.db.Queryx(GetAllPostsQuery, limit, offset)
+	rows, err := p.db.Queryx(GetAllPostsQuery)
 	if err != nil {
 		return nil, err
 	}

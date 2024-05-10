@@ -8,9 +8,7 @@ const (
     GetAllPostsQuery = `SELECT p.*, COUNT(l.user_id) as like_count FROM posts p 
     LEFT JOIN post_likes l ON p.id = l.post_id
     GROUP BY p.id
-    ORDER BY like_count DESC
-    LIMIT $1 
-    OFFSET $2`
+    ORDER BY like_count DESC`
 
     UpdatePostQuery = `UPDATE posts 
     SET content = $1, photo_link = $2, updated_at = NOW() 

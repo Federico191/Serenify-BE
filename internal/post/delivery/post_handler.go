@@ -4,7 +4,6 @@ import (
 	postUC "FindIt/internal/post/usecase"
 	userUC "FindIt/internal/user/usecase"
 	customError "FindIt/pkg/error"
-	"strconv"
 
 	"FindIt/model"
 	"FindIt/pkg/response"
@@ -101,14 +100,7 @@ func (p *PostHandler) GetPost(ctx *gin.Context) {
 }
 
 func (p *PostHandler) GetAllPosts(ctx *gin.Context) {
-	pageQuery := ctx.Query("page")
-	page , err := strconv.Atoi(pageQuery)
-	if err != nil {
-		response.Error(ctx, http.StatusBadRequest, "failed to get posts", err)
-		return 
-	}
-	
-	posts, err := p.postUC.GetAllPosts(page)
+	posts, err := p.postUC.GetAllPosts()
 	if err != nil {
 		switch {
 		case errors.Is(err, customError.ErrRecordNotFound):

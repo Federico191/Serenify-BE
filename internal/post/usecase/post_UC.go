@@ -18,7 +18,7 @@ import (
 
 type PostUCItf interface {
 	CreatePost(req *model.CreatePostReq) (*model.PostResponse, error)
-	GetAllPosts(page int) ([]model.PostResponse, error)
+	GetAllPosts() ([]model.PostResponse, error)
 	GetPostByPostId(post_id uuid.UUID) (*model.PostDetailResponse, error)
 	UpdatePost(req *model.UpdatePostReq) (*model.PostResponse, error)
 	DeletePost(user_id, post_id uuid.UUID) error
@@ -87,11 +87,8 @@ func (p *PostUC) CreatePost(req *model.CreatePostReq) (*model.PostResponse, erro
 }
 
 // GetAllPosts implements PostUCItf.
-func (p *PostUC) GetAllPosts(page int) ([]model.PostResponse, error) {
-	limit := 5
-	offset := (page - 1) * limit
-
-	posts, err := p.postRepo.GetAllPosts(limit, offset)
+func (p *PostUC) GetAllPosts() ([]model.PostResponse, error) {
+	posts, err := p.postRepo.GetAllPosts()
 	if err != nil {
 		return nil, err
 	}
