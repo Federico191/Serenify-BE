@@ -15,7 +15,7 @@ create table post_likes (
 );
 
 
-create table Comments (
+create table comments (
     ID SERIAL primary key,
     user_id varchar(100) not null,
     post_id varchar(100) not null,

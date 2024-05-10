@@ -1,3 +1,4 @@
-drop table if exists Comments;
-drop table if exists Likes;
+drop table if exists comment_likes;
+drop table if exists comments;
+drop table if exists post_likes;
 drop table if exists posts;
