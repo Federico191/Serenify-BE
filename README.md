@@ -29,3 +29,6 @@ Postman : https://documenter.getpostman.com/view/30865611/2sA3JM5gFB#c16bb113-27
 | Supabase | Platform cloud storage yang digunakan untuk menyimpan file dalam aplikasi |
 | SMTP     | Protokol yang digunakan untuk mengatur pengiriman email dalam aplikasi    |
 | Postgres | DBMS yang digunakan untuk menyimpan data aplikasi                         |
+
+## Deployment
+Aplikasi back-end belum terdeploy.
